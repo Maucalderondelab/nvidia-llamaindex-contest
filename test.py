@@ -28,11 +28,12 @@ def main():
     parser = DocumentParser(
         input_dir=DOCUMENT_PATH,
         output_dir=OUTPUT_PATH,
-        min_image_size=(224, 224)
+        min_image_size=(224, 224)  # Adjust this if needed
     )
     preprocessor = EmbeddingPreprocessor(
         chunk_size=512,
-        chunk_overlap=50
+        chunk_overlap=50,
+        output_dir=OUTPUT_PATH  # Add this
     )
     
     # Process documents

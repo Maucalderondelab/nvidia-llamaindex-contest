@@ -1,0 +1,1 @@
+s.  El precio unitario en venta se calcula como elcociente entre el precio total (€) y la superficie publicada (m²) y el  precio unitario en alquiler, como el cociente entre el precio mensual (€/mes) y la superficie publicada (m²).  El precio representa la media de los últimos tres meses. Informe residencial mensual - metodología
