@@ -1,4 +1,5 @@
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
+from pathlib import Path
 from .parser import DocumentContent, ImageContent
 import textwrap
 
@@ -19,23 +20,31 @@ class ContentValidator:
         return True
 
 class EmbeddingPreprocessor:
-    def __init__(self, chunk_size: int = 512, chunk_overlap: int = 50):
+    def __init__(
+            self, 
+            chunk_size: int = 512,
+            chunk_overlap: int = 50,
+            output_dir: Optional[Path] = None
+
+        ):
+        
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.output_dir = Path(output_dir) if output_dir else None
         self.validator = ContentValidator()
+        if self.output_dir:
+            (self.output_dir / "text").mkdir(parents=True, exist_ok=True)
 
     def chunk_text(self, text: str) -> List[str]:
         """Split text into chunks with overlap"""
         chunks = textwrap.wrap(text, self.chunk_size)
         
-        # Add overlap
         if len(chunks) > 1:
             overlapped_chunks = []
             for i in range(len(chunks)):
                 if i == 0:
                     overlapped_chunks.append(chunks[i])
                 else:
-                    # Add overlap from previous chunk
                     overlapped_chunks.append(
                         chunks[i-1][-self.chunk_overlap:] + chunks[i]
                     )
@@ -46,10 +55,14 @@ class EmbeddingPreprocessor:
         """Prepares text content for NV-embedding-ada"""
         text_chunks = []
         
+        processed_docs = sorted(processed_docs, key=lambda x: x.metadata.get("document_number", 0))
+        
         for doc in processed_docs:
             if doc.error:
                 continue
                 
+            doc_num = doc.metadata.get("document_number", 0)
+            
             for page in doc.pages:
                 if not self.validator.validate_text(page.text):
                     continue
@@ -63,6 +76,12 @@ class EmbeddingPreprocessor:
                         "document_path": str(doc.file_path),
                         "metadata": doc.metadata
                     }
+                    
+                    if self.output_dir:
+                        chunk_file = self.output_dir / "text" / f"doc_{doc_num}_page_{page.page_number}_chunk_{chunk_idx}.txt"
+                        chunk_file.write_text(chunk)
+                        chunk_data["file_path"] = str(chunk_file)
+                    
                     text_chunks.append(chunk_data)
                     
         return text_chunks
@@ -70,6 +89,8 @@ class EmbeddingPreprocessor:
     def prepare_for_image_processing(self, processed_docs: List[DocumentContent]) -> List[Dict[str, Any]]:
         """Prepares images for Neva-22b processing"""
         image_data = []
+        
+        processed_docs = sorted(processed_docs, key=lambda x: x.metadata.get("document_number", 0))
         
         for doc in processed_docs:
             if doc.error:
